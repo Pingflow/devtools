@@ -1,6 +1,6 @@
-package lib
+package slice
 
-func RemoveEmptySlice(in []string) []string {
+func RemoveEmpty(in []string) []string {
 
 	var s []string
 

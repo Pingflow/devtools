@@ -3,21 +3,24 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Pingflow/devtools/src/lib/colors"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
-	"github.com/Pingflow/devtools/src/lib"
 	"github.com/Pingflow/devtools/src/lib/docker"
+	"github.com/Pingflow/devtools/src/lib/wait"
 	"github.com/hashicorp/vault/api"
 )
 
 type IClients interface {
 	IsInitialized() (bool, error)
 	IsSealed() (bool, error)
+	Wait() error
 	Init() (*api.InitResponse, error)
-	UnSeal() (*api.SealStatusResponse, error)
+	UnSeal() error
 	Leader() (*api.LeaderResponse, error)
 }
 
@@ -43,6 +46,8 @@ func NewFromDockerCompose(compose docker.ComposeFile, credentialPath string) (IC
 		}
 	}
 
+	sort.Strings(c)
+
 	return New(credentialPath, c...), nil
 }
 
@@ -53,14 +58,46 @@ func New(credentialPath string, clients ...string) IClients {
 	}
 }
 
+func (c client) Wait() error {
+
+	vc, e := api.NewClient(api.DefaultConfig())
+	if e != nil {
+		return e
+	}
+
+	for _, vault := range c.clients {
+
+		addr := strings.TrimPrefix(vault, "http://")
+
+		fmt.Printf("Wait vault %v\t\t...", addr)
+
+		if e := wait.TCP([]string{addr}, time.Second*10); e != nil {
+			return e
+		}
+
+		if e := vc.SetAddress(vault); e != nil {
+			return e
+		}
+
+		var ready = false
+		for !ready {
+			_, e := vc.Sys().Health()
+			if e == nil {
+				ready = true
+				fmt.Printf("\rWait vault %v\t\t... %sdone%s\n", addr, colors.Green.ToString(), colors.Reset.ToString())
+			} else {
+				fmt.Printf("\rWait vault %v\t\t... %serror%s: %v\n", addr, colors.Red.ToString(), colors.Reset.ToString(), e)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (c client) Init() (*api.InitResponse, error) {
 
 	vc, e := api.NewClient(api.DefaultConfig())
 	if e != nil {
-		return nil, e
-	}
-
-	if e := lib.WaitForServices([]string{strings.TrimPrefix(c.clients[0], "http://")}, time.Second*10); e != nil {
 		return nil, e
 	}
 
@@ -74,11 +111,15 @@ func (c client) Init() (*api.InitResponse, error) {
 	}
 
 	if !init {
+		addr := strings.TrimPrefix(c.clients[0], "http://")
+		fmt.Printf("Init vault %v\t\t...", addr)
+
 		r, e := vc.Sys().Init(&api.InitRequest{
 			SecretShares:    1,
 			SecretThreshold: 1,
 		})
 		if e != nil {
+			fmt.Printf("\rInit vault %v\t\t... %serror%s: %v\n", addr, colors.Red.ToString(), colors.Reset.ToString(), e)
 			return nil, e
 		}
 
@@ -91,51 +132,71 @@ func (c client) Init() (*api.InitResponse, error) {
 			return nil, e
 		}
 
+		fmt.Printf("\rInit vault %v\t\t... %sdone%s\n", addr, colors.Green.ToString(), colors.Reset.ToString())
 		return r, nil
 	}
 
 	return nil, nil
 }
 
-func (c client) UnSeal() (*api.SealStatusResponse, error) {
+func (c client) UnSeal() error {
 
 	vc, e := api.NewClient(api.DefaultConfig())
 	if e != nil {
-		return nil, e
+		return e
 	}
 
 	if _, e := os.Stat(c.credentialPath); os.IsNotExist(e) {
-		return nil, os.ErrNotExist
+		return os.ErrNotExist
 	}
 
 	var credential api.InitResponse
 	b, e := ioutil.ReadFile(c.credentialPath)
 	if e != nil {
-		return nil, e
+		return e
 	}
 
 	if e := json.Unmarshal(b, &credential); e != nil {
-		return nil, e
+		return e
 	}
 
 	for _, v := range c.clients {
+
 		if e := vc.SetAddress(v); e != nil {
-			return nil, e
+			return e
 		}
 
 		seal, e := vc.Sys().SealStatus()
 		if e != nil {
-			return nil, e
+			return e
 		}
 
 		if seal.Sealed {
+
+			addr := strings.TrimPrefix(v, "http://")
+			fmt.Printf("Unseal vault %v\t\t...", addr)
+
 			for _, k := range credential.KeysB64 {
-				return vc.Sys().Unseal(k)
+				_, e := vc.Sys().Unseal(k)
+				if e != nil {
+					return e
+				}
+			}
+
+			seal, e := vc.Sys().SealStatus()
+			if e != nil {
+				return e
+			}
+
+			if seal.Sealed {
+				fmt.Printf("\rUnseal vault %v\t\t... %serror%s\n", addr, colors.Red.ToString(), colors.Reset.ToString())
+			} else {
+				fmt.Printf("\rUnseal vault %v\t\t... %sdone%s\n", addr, colors.Green.ToString(), colors.Reset.ToString())
 			}
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
 func (c client) Leader() (*api.LeaderResponse, error) {

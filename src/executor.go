@@ -1,18 +1,19 @@
-package services
+package src
 
 import (
 	"errors"
 	"fmt"
 	"os"
 
-	"github.com/Pingflow/devtools/src/lib"
+	"github.com/Pingflow/devtools/src/lib/cmd"
+	"github.com/Pingflow/devtools/src/lib/exec"
 )
 
 var ErrCommandNotFound = errors.New("command not found")
 
-func Executor(in string) {
+func executor(in string) {
 
-	cmd := Cmd(in)
+	cmd := cmd.New(in)
 
 	switch cmd.Root() {
 
@@ -41,7 +42,7 @@ func Executor(in string) {
 		return
 
 	case "exit":
-		Stop()
+		stop()
 		return
 
 	default:
@@ -51,7 +52,7 @@ func Executor(in string) {
 	}
 }
 
-func executorPs(cmd cmd) {
+func executorPs(cmd cmd.Cmd) {
 
 	if e := dc.Ps(); e != nil {
 		newError(e)
@@ -59,7 +60,7 @@ func executorPs(cmd cmd) {
 	}
 }
 
-func executorLogs(cmd cmd) {
+func executorLogs(cmd cmd.Cmd) {
 
 	if e := dc.Logs(cmd...); e != nil {
 		newError(e)
@@ -67,7 +68,7 @@ func executorLogs(cmd cmd) {
 	}
 }
 
-func executorExec(cmd cmd) {
+func executorExec(cmd cmd.Cmd) {
 
 	if e := cmd.HasCmdE(); e != nil {
 		newError(e)
@@ -90,7 +91,7 @@ func executorExec(cmd cmd) {
 	}
 }
 
-func executorConsul(cmd cmd) {
+func executorConsul(cmd cmd.Cmd) {
 
 	if e := cmd.HasCmdE(); e != nil {
 		newError(e)
@@ -110,11 +111,11 @@ func executorConsul(cmd cmd) {
 	}
 }
 
-func executorConsulDefault(cmd cmd) {
+func executorConsulDefault(cmd cmd.Cmd) {
 	newError(ErrCommandNotFound)
 }
 
-func executorConsulUi(cmd cmd) {
+func executorConsulUi(cmd cmd.Cmd) {
 
 	if e := cmd.HasCmdE(); e != nil {
 		newError(e)
@@ -130,7 +131,7 @@ func executorConsulUi(cmd cmd) {
 
 		for _, p := range s.ListPorts() {
 			if p.Local == 8500 {
-				if e := lib.Exec("xdg-open", fmt.Sprintf("http://127.0.0.1:%d", p.Host)); e != nil {
+				if e := exec.Run("xdg-open", fmt.Sprintf("http://127.0.0.1:%d", p.Host)); e != nil {
 					newError(e)
 					return
 				}
@@ -139,7 +140,7 @@ func executorConsulUi(cmd cmd) {
 	}
 }
 
-func executorVault(cmd cmd) {
+func executorVault(cmd cmd.Cmd) {
 
 	if e := cmd.HasCmdE(); e != nil {
 		newError(e)
@@ -159,11 +160,11 @@ func executorVault(cmd cmd) {
 	}
 }
 
-func executorVaultDefault(cmd cmd) {
+func executorVaultDefault(cmd cmd.Cmd) {
 	newError(ErrCommandNotFound)
 }
 
-func executorVaultUi(cmd cmd) {
+func executorVaultUi(cmd cmd.Cmd) {
 
 	if e := cmd.HasCmdE(); e != nil {
 		newError(e)
@@ -179,7 +180,7 @@ func executorVaultUi(cmd cmd) {
 
 		for _, p := range s.ListPorts() {
 			if p.Local == 8200 {
-				if e := lib.Exec("xdg-open", fmt.Sprintf("http://127.0.0.1:%d", p.Host)); e != nil {
+				if e := exec.Run("xdg-open", fmt.Sprintf("http://127.0.0.1:%d", p.Host)); e != nil {
 					newError(e)
 					return
 				}
@@ -188,7 +189,7 @@ func executorVaultUi(cmd cmd) {
 	}
 }
 
-func executorClear(cmd cmd) {
+func executorClear(cmd cmd.Cmd) {
 	if e := dc.Stop(); e != nil {
 		newError(e)
 		return
@@ -199,14 +200,13 @@ func executorClear(cmd cmd) {
 		return
 	}
 
-	if e := ResetPF4(); e != nil {
+	if e := resetPF4(); e != nil {
 		newError(e)
 		return
 	}
 
 	os.Exit(0)
 }
-
 
 func newError(e error) {
 	fmt.Printf("\033[31mERROR\033[0m: %v\n", e)

@@ -1,11 +1,11 @@
-package lib
+package exec
 
 import (
 	"os"
 	"os/exec"
 )
 
-func Exec(name string, args ...string) error {
+func Run(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

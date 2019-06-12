@@ -1,14 +1,18 @@
-package services
+package src
 
 import (
+	"sort"
+	"strings"
+
+	"github.com/Pingflow/devtools/src/lib/cmd"
 	"github.com/c-bata/go-prompt"
 )
 
 var resetSuggest []prompt.Suggest
 
-func Completer(in prompt.Document) []prompt.Suggest {
+func completer(in prompt.Document) []prompt.Suggest {
 
-	cmd := Cmd(in.Text)
+	cmd := cmd.New(in.Text)
 
 	switch cmd.Root() {
 
@@ -38,7 +42,7 @@ func Completer(in prompt.Document) []prompt.Suggest {
 	}
 }
 
-func completerDefault(in prompt.Document, cmd cmd) []prompt.Suggest {
+func completerDefault(in prompt.Document, cmd cmd.Cmd) []prompt.Suggest {
 	s := []prompt.Suggest{
 		{
 			Text:        "ps",
@@ -73,18 +77,18 @@ func completerDefault(in prompt.Document, cmd cmd) []prompt.Suggest {
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
 }
 
-func completerPs(in prompt.Document, cmd cmd) []prompt.Suggest {
+func completerPs(in prompt.Document, cmd cmd.Cmd) []prompt.Suggest {
 	s := resetSuggest
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
 }
 
-func completerLogs(in prompt.Document, cmd cmd) []prompt.Suggest {
+func completerLogs(in prompt.Document, cmd cmd.Cmd) []prompt.Suggest {
 	s := suggest(cmd)
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
 }
 
-func completerExec(in prompt.Document, cmd cmd) []prompt.Suggest {
-	if !cmd.HasCmd() {
+func completerExec(in prompt.Document, cmd cmd.Cmd) []prompt.Suggest {
+	if cmd.HasCmd() {
 		s := resetSuggest
 		return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
 	}
@@ -92,7 +96,7 @@ func completerExec(in prompt.Document, cmd cmd) []prompt.Suggest {
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
 }
 
-func completerConsul(in prompt.Document, cmd cmd) []prompt.Suggest {
+func completerConsul(in prompt.Document, cmd cmd.Cmd) []prompt.Suggest {
 	switch cmd.Root() {
 
 	case "ui":
@@ -111,7 +115,7 @@ func completerConsul(in prompt.Document, cmd cmd) []prompt.Suggest {
 	}
 }
 
-func completerVault(in prompt.Document, cmd cmd) []prompt.Suggest {
+func completerVault(in prompt.Document, cmd cmd.Cmd) []prompt.Suggest {
 	switch cmd.Root() {
 
 	case "ui":
@@ -130,12 +134,65 @@ func completerVault(in prompt.Document, cmd cmd) []prompt.Suggest {
 	}
 }
 
-func completerClear(in prompt.Document, cmd cmd) []prompt.Suggest {
+func completerClear(in prompt.Document, cmd cmd.Cmd) []prompt.Suggest {
 	s := resetSuggest
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
 }
 
-func completerExit(in prompt.Document, cmd cmd) []prompt.Suggest {
+func completerExit(in prompt.Document, cmd cmd.Cmd) []prompt.Suggest {
 	s := resetSuggest
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
+}
+
+func services(current []string) []string {
+
+	s, e := dc.Services()
+	if e != nil {
+		newError(e)
+		return nil
+	}
+
+	var keys []string
+	for k := range s {
+		exist := false
+		for _, c := range current {
+			if c == k {
+				exist = true
+			}
+		}
+		if !exist {
+			keys = append(keys, k)
+		}
+	}
+	sort.Strings(keys)
+
+	return keys
+}
+
+func suggest(current []string) []prompt.Suggest {
+
+	var sug []prompt.Suggest
+	for _, k := range services(current) {
+		sug = append(sug, prompt.Suggest{
+			Text:        k,
+			Description: strings.Title(strings.ReplaceAll(k, "-", " ")),
+		})
+	}
+
+	return sug
+}
+
+func suggestStartWith(current []string, prefix string) []prompt.Suggest {
+
+	var sug []prompt.Suggest
+	for _, k := range services(current) {
+		if strings.HasPrefix(k, prefix) {
+			sug = append(sug, prompt.Suggest{
+				Text:        k,
+				Description: strings.Title(strings.ReplaceAll(k, "-", " ")),
+			})
+		}
+	}
+
+	return sug
 }

@@ -1,4 +1,4 @@
-package lib
+package wait
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func WaitForServices(services []string, timeOut time.Duration) error {
+func TCP(services []string, timeOut time.Duration) error {
 	var depChan = make(chan struct{})
 	var wg sync.WaitGroup
 	wg.Add(len(services))

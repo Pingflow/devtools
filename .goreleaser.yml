@@ -1,13 +1,71 @@
-project_name: pf4
+# Make sure to check the documentation at http://goreleaser.com
+before:
+  hooks:
+    - go mod download
 
 builds:
-  -
+  - main: main.go
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
     goos:
       - darwin
       - linux
     goarch:
       - amd64
-    env:
-      - CGO_ENABLED=0
-    main: main.go
-    binary: pf4
+
+archive:
+  name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}'
+  replacements:
+    darwin: Darwin
+    linux: Linux
+    windows: Windows
+    386: i386
+    amd64: x86_64
+  format_overrides:
+    - goos: windows
+      format: zip
+  files:
+    - config/*
+
+nfpm:
+  name_template: '{{ .ProjectName }}_{{ .Arch }}'
+  vendor: PingFlow
+  description: "GoLang DevTools for GoMicro."
+  license: MIT
+  formats:
+    - deb
+
+brew:
+  github:
+    owner: PingFlow
+    name: homebrew-tap
+  description: "GoLang DevTools for GoMicro."
+
+snapcraft:
+  name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+  summary: "GoLang DevTools for GoMicro."
+  description: "GoLang DevTools for GoMicro."
+  grade: stable
+  confinement: strict
+  publish: true
+  plugs:
+    personal-files:
+      read:
+        - $HOME/.foo
+      write:
+        - $HOME/.foo
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
