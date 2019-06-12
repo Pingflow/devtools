@@ -1,0 +1,28 @@
+# traefik.toml
+logLevel = "INFO"
+
+[entryPoints]
+  [entryPoints.http]
+    address = ":80"
+    compress = true
+
+  [entryPoints.https]
+    address = ":443"
+    compress = true
+    [entryPoints.https.tls]
+
+  [entryPoints.traefik]
+    address = ":8080"
+
+[api]
+  entryPoint = "traefik"
+  dashboard = true
+
+[metrics]
+  [metrics.prometheus]
+    entryPoint = "traefik"
+
+[consul]
+  endpoint = "consul:8500"
+  watch = true
+  prefix = "traefik"

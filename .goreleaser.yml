@@ -1,0 +1,13 @@
+project_name: pf4
+
+builds:
+  -
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=0
+    main: main.go
+    binary: pf4
