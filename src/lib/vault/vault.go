@@ -196,7 +196,7 @@ func (c client) UnSeal() error {
 		}
 	}
 
-	return nil
+	return c.EnableUserpass(credential.RootToken)
 }
 
 func (c client) Leader() (*api.LeaderResponse, error) {
@@ -244,4 +244,25 @@ func (c client) IsSealed() (bool, error) {
 	}
 
 	return r.Sealed, nil
+}
+
+func (c client) EnableUserpass(rootToken string) error {
+	vc, e := api.NewClient(api.DefaultConfig())
+	if e != nil {
+		return e
+	}
+
+	vc.SetToken(rootToken)
+
+	if e := vc.SetAddress(c.clients[0]); e != nil {
+		return e
+	}
+
+	if e := vc.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{Type: "userpass"}); e != nil {
+		fmt.Printf("\rEnable Vault Userpass auth\t\t... %serror%s\n", colors.Green.ToString(), colors.Reset.ToString())
+		return e
+	}
+
+	fmt.Printf("\rEnable Vault Userpass\t\t... %sdone%s\n", colors.Green.ToString(), colors.Reset.ToString())
+	return nil
 }
