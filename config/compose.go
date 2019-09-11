@@ -167,7 +167,7 @@ var DockerCompose = DockerComposeFormat{
 			Image:         "microhq/micro",
 			Hostname:      "api",
 			ContainerName: "api",
-			Command:       "--enable_stats --registry=consul --registry_address=\"consul:8500\" --server_name=\"com.pingflow.api\" api --handler=web --namespace=\"com.pingflow\"",
+			Command:       "--enable_stats --registry=consul --registry_address=\"consul:8500\" --server_name=\"com.pingflow.api\" api --handler=web --namespace=\"com.pingflow.api\"",
 			Ports: []string{
 				"8000:8080",
 			},
@@ -178,6 +178,29 @@ var DockerCompose = DockerComposeFormat{
 			},
 			Links: []string{
 				"consul-3:consul",
+			},
+		},
+
+		"postgres": {
+			Image:         "postgres:9.6",
+			Hostname:      "postgres",
+			ContainerName: "postgres",
+			Environment: []string{
+				"POSTGRES_DB=devtools",
+				"POSTGRES_USER=devtools",
+				"POSTGRES_PASSWORD=devtools",
+			},
+			Ports: []string{
+				"5432:5432",
+			},
+		},
+
+		"redis": {
+			Image:         "redis:3.2",
+			Hostname:      "redis",
+			ContainerName: "redis",
+			Ports: []string{
+				"6379:6379",
 			},
 		},
 	},
@@ -196,6 +219,7 @@ type (
 		Hostname      string                                         `yaml:"hostname,omitempty"`
 		ContainerName string                                         `yaml:"container_name,omitempty"`
 		Command       string                                         `yaml:"command,omitempty"`
+		Environment   []string                                       `yaml:"environment,omitempty"`
 		Ports         []string                                       `yaml:"ports,omitempty"`
 		DependsOn     map[string]DockerComposeFormatServiceDependsOn `yaml:"depends_on,omitempty"`
 		Links         []string                                       `yaml:"links,omitempty"`
