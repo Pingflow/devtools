@@ -196,6 +196,9 @@ func (c client) UnSeal() error {
 		}
 	}
 
+	if e := c.EnableSecretKeyValueEngine(credential.RootToken); e != nil {
+		return e
+	}
 	return c.EnableUserpass(credential.RootToken)
 }
 
@@ -264,5 +267,26 @@ func (c client) EnableUserpass(rootToken string) error {
 	}
 
 	fmt.Printf("\rEnable Vault Userpass\t\t... %sdone%s\n", colors.Green.ToString(), colors.Reset.ToString())
+	return nil
+}
+
+func (c client) EnableSecretKeyValueEngine(rootToken string) error {
+	secretEnginePath := "kv/secret/data"
+	vc, e := api.NewClient(api.DefaultConfig())
+	if e != nil {
+		return e
+	}
+	vc.SetToken(rootToken)
+
+	if e := vc.SetAddress(c.clients[0]); e != nil {
+		return e
+	}
+
+	if e := vc.Sys().Mount(secretEnginePath, &api.MountInput{Type: "kv"}); e != nil {
+		fmt.Printf("\rEnable Vault KVv1 secret engine at %s\t\t... %serror%s\n", secretEnginePath, colors.Green.ToString(), colors.Reset.ToString())
+		return e
+	}
+
+	fmt.Printf("\rMount Vault KV v1 engine at %s\t\t... %sdone%s\n", secretEnginePath, colors.Green.ToString(), colors.Reset.ToString())
 	return nil
 }
