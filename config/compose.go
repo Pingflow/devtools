@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 var DockerCompose = DockerComposeFormat{
@@ -144,43 +144,6 @@ var DockerCompose = DockerComposeFormat{
 				"IPC_LOCK",
 			},
 		},
-
-		"web": {
-			Image:         "microhq/micro",
-			Hostname:      "web",
-			ContainerName: "web",
-			Command:       "--enable_stats --registry=consul --registry_address=\"consul:8500\" --server_name=\"com.pingflow.web\" web --namespace=\"com.pingflow\"",
-			Ports: []string{
-				"8001:8082",
-			},
-			DependsOn: map[string]DockerComposeFormatServiceDependsOn{
-				"consul-2": {
-					Condition: "service_healthy",
-				},
-			},
-			Links: []string{
-				"consul-2:consul",
-			},
-		},
-
-		"api": {
-			Image:         "microhq/micro",
-			Hostname:      "api",
-			ContainerName: "api",
-			Command:       "--enable_stats --registry=consul --registry_address=\"consul:8500\" --server_name=\"com.pingflow.api\" api --handler=web --namespace=\"com.pingflow.api\"",
-			Ports: []string{
-				"8000:8080",
-			},
-			DependsOn: map[string]DockerComposeFormatServiceDependsOn{
-				"consul-3": {
-					Condition: "service_healthy",
-				},
-			},
-			Links: []string{
-				"consul-3:consul",
-			},
-		},
-
 		"postgres": {
 			Image:         "postgres:9.6",
 			Hostname:      "postgres",
